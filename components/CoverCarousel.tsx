@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { SONGS } from '../constants';
 import { usePlayer } from '../App';
 import { PlayCircle } from 'lucide-react';
+
+// Drag sensitivity: lower value = more sensitive (larger movement per pixel)
+const DRAG_SENSITIVITY = 0.6;
 
 export const CoverCarousel: React.FC = () => {
   const { currentSong, playSong, selectSong, isLyricViewOpen } = usePlayer();
@@ -36,18 +39,18 @@ export const CoverCarousel: React.FC = () => {
     }
   }, [activeIndex]);
 
-  const handleDrag = (event: any, info: any) => {
+  const handleDrag = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     // Update drag offset continuously during drag
     setDragOffset(info.offset.x);
   };
 
-  const handleDragEnd = (event: any, info: any) => {
+  const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     // Calculate how many positions to move based on total drag distance
     const cardWidth = isMobile ? 256 : 384; // Match container width (w-64 = 256px, w-96 = 384px)
     const dragDistance = info.offset.x;
     
     // Calculate the number of cards to skip (positive = left, negative = right)
-    const skipCount = Math.round(-dragDistance / (cardWidth * 0.6)); // 0.6 for smoother feel
+    const skipCount = Math.round(-dragDistance / (cardWidth * DRAG_SENSITIVITY));
     
     // Update active index by the skip count
     setActiveIndex((prev) => {
@@ -87,7 +90,7 @@ export const CoverCarousel: React.FC = () => {
               
               // Apply continuous drag offset to create smooth scrolling effect
               const cardWidth = isMobile ? 256 : 384;
-              const dragOffsetInCards = -dragOffset / (cardWidth * 0.6); // Convert pixels to card units
+              const dragOffsetInCards = -dragOffset / (cardWidth * DRAG_SENSITIVITY); // Convert pixels to card units
               const effectiveOffset = offset + dragOffsetInCards;
               
               const isActive = Math.abs(effectiveOffset) < 0.5; // Active when close to center
@@ -103,7 +106,7 @@ export const CoverCarousel: React.FC = () => {
                   y: Math.abs(effectiveOffset) * 10, // Slight drop for background cards
                   scale: 1 - Math.abs(effectiveOffset) * 0.15, // Scale down background
                   opacity: isVisible ? (isActive ? 1 : 0.5) : 0, // Lower opacity for background
-                  zIndex: 20 - Math.abs(effectiveOffset), // Layering
+                  zIndex: Math.round(20 - Math.abs(effectiveOffset)), // Layering with integer values
                   rotateY: 0, // No rotation for cleaner look
                   rotateZ: effectiveOffset * 5, // Slight tilt
                 };
@@ -113,7 +116,7 @@ export const CoverCarousel: React.FC = () => {
                   x: effectiveOffset * 110 + '%',
                   scale: isActive ? 1 : 0.85,
                   opacity: isVisible ? (isActive ? 1 : 0.4) : 0,
-                  zIndex: isActive ? 20 : (10 - Math.abs(effectiveOffset)),
+                  zIndex: isActive ? 20 : Math.round(10 - Math.abs(effectiveOffset)), // Integer zIndex
                   rotateY: effectiveOffset * -15, 
                   rotateZ: 0,
                 };
