@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { SONGS } from '../constants';
 import { usePlayer } from '../App';
@@ -12,6 +12,7 @@ export const CoverCarousel: React.FC = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [continuousOffset, setContinuousOffset] = useState(0); // Fractional offset for smooth scrolling
+  const carouselRef = useRef<HTMLDivElement>(null); // Ref for carousel container
 
   // Responsive check
   useEffect(() => {
@@ -43,6 +44,9 @@ export const CoverCarousel: React.FC = () => {
   useEffect(() => {
     if (isMobile || isLyricViewOpen) return;
 
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+
     const handleWheel = (e: WheelEvent) => {
       // Prevent default scrolling
       e.preventDefault();
@@ -65,11 +69,8 @@ export const CoverCarousel: React.FC = () => {
     };
 
     // Add wheel event listener to the carousel container
-    const carousel = document.querySelector('.carousel-container');
-    if (carousel) {
-      carousel.addEventListener('wheel', handleWheel, { passive: false });
-      return () => carousel.removeEventListener('wheel', handleWheel);
-    }
+    carousel.addEventListener('wheel', handleWheel, { passive: false });
+    return () => carousel.removeEventListener('wheel', handleWheel);
   }, [isMobile, isLyricViewOpen, SONGS.length]);
 
   const handleDrag = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
@@ -118,7 +119,10 @@ export const CoverCarousel: React.FC = () => {
           className="relative w-full h-[60vh] md:h-[70vh] flex flex-col items-center justify-center perspective-1000"
         >
           {/* Carousel Container */}
-          <div className="carousel-container relative w-64 h-64 md:w-96 md:h-96 flex items-center justify-center">
+          <div 
+            ref={carouselRef}
+            className="carousel-container relative w-64 h-64 md:w-96 md:h-96 flex items-center justify-center"
+          >
             {SONGS.map((song, index) => {
               const baseOffset = getOffset(index, activeIndex, SONGS.length);
               // Add continuous offset for smooth dragging
