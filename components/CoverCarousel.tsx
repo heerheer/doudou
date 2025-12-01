@@ -8,6 +8,7 @@ export const CoverCarousel: React.FC = () => {
   const { currentSong, playSong, selectSong, isLyricViewOpen } = usePlayer();
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0); // Track continuous drag offset
 
   // Responsive check
   useEffect(() => {
@@ -35,13 +36,27 @@ export const CoverCarousel: React.FC = () => {
     }
   }, [activeIndex]);
 
+  const handleDrag = (event: any, info: any) => {
+    // Update drag offset continuously during drag
+    setDragOffset(info.offset.x);
+  };
+
   const handleDragEnd = (event: any, info: any) => {
-    const threshold = 20; 
-    if (info.offset.x < -threshold) {
-      setActiveIndex((prev) => (prev + 1) % SONGS.length);
-    } else if (info.offset.x > threshold) {
-      setActiveIndex((prev) => (prev - 1 + SONGS.length) % SONGS.length);
-    }
+    // Calculate how many positions to move based on total drag distance
+    const cardWidth = isMobile ? 256 : 384; // Match container width (w-64 = 256px, w-96 = 384px)
+    const dragDistance = info.offset.x;
+    
+    // Calculate the number of cards to skip (positive = left, negative = right)
+    const skipCount = Math.round(-dragDistance / (cardWidth * 0.6)); // 0.6 for smoother feel
+    
+    // Update active index by the skip count
+    setActiveIndex((prev) => {
+      const newIndex = (prev + skipCount) % SONGS.length;
+      return newIndex < 0 ? newIndex + SONGS.length : newIndex;
+    });
+    
+    // Reset drag offset
+    setDragOffset(0);
   };
 
   const activeSong = SONGS[activeIndex];
@@ -69,31 +84,37 @@ export const CoverCarousel: React.FC = () => {
           <div className="relative w-64 h-64 md:w-96 md:h-96 flex items-center justify-center">
             {SONGS.map((song, index) => {
               const offset = getOffset(index, activeIndex, SONGS.length);
-              const isActive = offset === 0;
-              const isVisible = Math.abs(offset) <= 2; // Increased visibility range for mobile stack
+              
+              // Apply continuous drag offset to create smooth scrolling effect
+              const cardWidth = isMobile ? 256 : 384;
+              const dragOffsetInCards = -dragOffset / (cardWidth * 0.6); // Convert pixels to card units
+              const effectiveOffset = offset + dragOffsetInCards;
+              
+              const isActive = Math.abs(effectiveOffset) < 0.5; // Active when close to center
+              const isVisible = Math.abs(effectiveOffset) <= 3; // Increased visibility range
 
-              // Styles calculation based on offset
+              // Styles calculation based on effective offset (with drag)
               let animateProps = {};
               
               if (isMobile) {
                 // Stacked Deck Effect (Mobile) - Tuned
                 animateProps = {
-                  x: offset * 40, // 40px overlap
-                  y: Math.abs(offset) * 10, // Slight drop for background cards
-                  scale: 1 - Math.abs(offset) * 0.15, // Scale down background
+                  x: effectiveOffset * 40, // 40px overlap
+                  y: Math.abs(effectiveOffset) * 10, // Slight drop for background cards
+                  scale: 1 - Math.abs(effectiveOffset) * 0.15, // Scale down background
                   opacity: isVisible ? (isActive ? 1 : 0.5) : 0, // Lower opacity for background
-                  zIndex: 20 - Math.abs(offset), // Layering
+                  zIndex: 20 - Math.abs(effectiveOffset), // Layering
                   rotateY: 0, // No rotation for cleaner look
-                  rotateZ: offset * 5, // Slight tilt
+                  rotateZ: effectiveOffset * 5, // Slight tilt
                 };
               } else {
                 // Flat Gallery Effect (Desktop)
                 animateProps = {
-                  x: offset * 110 + '%',
+                  x: effectiveOffset * 110 + '%',
                   scale: isActive ? 1 : 0.85,
                   opacity: isVisible ? (isActive ? 1 : 0.4) : 0,
-                  zIndex: isActive ? 20 : (10 - Math.abs(offset)),
-                  rotateY: offset * -15, 
+                  zIndex: isActive ? 20 : (10 - Math.abs(effectiveOffset)),
+                  rotateY: effectiveOffset * -15, 
                   rotateZ: 0,
                 };
               }
@@ -114,6 +135,7 @@ export const CoverCarousel: React.FC = () => {
                   drag={isActive ? "x" : false}
                   dragConstraints={{ left: 0, right: 0 }}
                   dragElastic={0.1}
+                  onDrag={handleDrag}
                   onDragEnd={handleDragEnd}
                   onClick={() => {
                     if (isActive) {
