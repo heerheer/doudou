@@ -41,20 +41,21 @@ export const CoverCarousel: React.FC = () => {
 
   const handleDrag = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     // Convert drag distance to continuous offset
+    // Positive drag (right) should show previous song (move carousel left)
     const cardWidth = isMobile ? 256 : 384;
-    const dragInCards = -info.offset.x / (cardWidth * DRAG_SENSITIVITY);
+    const dragInCards = info.offset.x / (cardWidth * DRAG_SENSITIVITY);
     setContinuousOffset(dragInCards);
   };
 
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     // Calculate how many cards were skipped
     const cardWidth = isMobile ? 256 : 384;
-    const dragInCards = -info.offset.x / (cardWidth * DRAG_SENSITIVITY);
+    const dragInCards = info.offset.x / (cardWidth * DRAG_SENSITIVITY);
     const skipCount = Math.round(dragInCards);
     
-    // Update active index
+    // Update active index - positive drag means going backwards
     setActiveIndex((prev) => {
-      const newIndex = (prev + skipCount) % SONGS.length;
+      const newIndex = (prev - skipCount) % SONGS.length;
       return newIndex < 0 ? newIndex + SONGS.length : newIndex;
     });
     
