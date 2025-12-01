@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>DOUDOU Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+      /* Custom Scrollbar for Lyrics */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      body {
+        font-family: 'Noto Sans SC', sans-serif;
+        background-color: var(--theme-base);
+        color: var(--theme-text);
+        transition: background-color 1s ease, color 1s ease;
+      }
+      h1, h2, h3, .font-serif {
+        font-family: 'Noto Serif SC', serif;
+      }
+      
+      /* Marquee Animation */
+      @keyframes marquee {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
+      }
+      .animate-marquee {
+        display: inline-flex;
+        animation: marquee 10s linear infinite;
+        white-space: nowrap;
+      }
+    </style>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              theme: {
+                base: 'var(--theme-base)',
+                surface: 'var(--theme-surface)',
+                text: 'var(--theme-text)',
+                subtext: 'var(--theme-subtext)',
+                accent: 'var(--theme-accent)',
+                glow: 'var(--theme-glow)',
+              }
+            },
+            backgroundImage: {
+              'noise': "url('https://grainy-gradients.vercel.app/noise.svg')",
+            },
+            boxShadow: {
+              'glow': '0 0 20px -5px var(--theme-glow)',
+              'glow-lg': '0 0 40px -10px var(--theme-glow)',
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "framer-motion": "https://aistudiocdn.com/framer-motion@^12.23.24",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0"
+  }
+}
+</script>
+</head>
+  <body class="overflow-hidden select-none">
+    <div id="root"></div>
+  </body>
+</html>
