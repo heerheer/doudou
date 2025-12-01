@@ -60,20 +60,21 @@ export const CoverCarousel: React.FC = () => {
             {SONGS.map((song, index) => {
               const offset = getOffset(index, activeIndex, SONGS.length);
               const isActive = offset === 0;
-              const isVisible = Math.abs(offset) <= 1; // Only animate visible neighbors
+              const isVisible = Math.abs(offset) <= 2; // Increased visibility range for mobile stack
 
               // Styles calculation based on offset
               let animateProps = {};
               
               if (isMobile) {
-                // Stacked Deck Effect (Mobile)
+                // Stacked Deck Effect (Mobile) - Tuned
                 animateProps = {
-                  x: offset * 15 + '%',
-                  scale: isActive ? 1 : 0.9,
-                  opacity: isVisible ? (isActive ? 1 : 0.6) : 0,
-                  zIndex: isActive ? 20 : (10 - Math.abs(offset)),
-                  rotateY: offset * -5, 
-                  rotateZ: offset * 2,
+                  x: offset * 40, // 40px overlap
+                  y: Math.abs(offset) * 10, // Slight drop for background cards
+                  scale: 1 - Math.abs(offset) * 0.15, // Scale down background
+                  opacity: isVisible ? (isActive ? 1 : 0.5) : 0, // Lower opacity for background
+                  zIndex: 20 - Math.abs(offset), // Layering
+                  rotateY: 0, // No rotation for cleaner look
+                  rotateZ: offset * 5, // Slight tilt
                 };
               } else {
                 // Flat Gallery Effect (Desktop)
@@ -93,7 +94,7 @@ export const CoverCarousel: React.FC = () => {
                   className={`absolute rounded-2xl overflow-hidden shadow-2xl origin-center transition-shadow duration-500
                     ${isActive ? 'shadow-glow cursor-pointer' : 'cursor-default'}
                   `}
-                  initial={false} // Disable initial animation to prevent flashing on mount
+                  initial={false} 
                   animate={animateProps}
                   transition={{ 
                     type: "spring", 
@@ -107,8 +108,8 @@ export const CoverCarousel: React.FC = () => {
                   onClick={() => {
                     if (isActive) {
                         playSong(song);
-                    } else if (isVisible) {
-                        // Click neighbor to navigate
+                    } else if (Math.abs(offset) <= 1) {
+                        // Click immediate neighbor to navigate
                         if (offset === 1) setActiveIndex((prev) => (prev + 1) % SONGS.length);
                         if (offset === -1) setActiveIndex((prev) => (prev - 1 + SONGS.length) % SONGS.length);
                     }
@@ -116,8 +117,7 @@ export const CoverCarousel: React.FC = () => {
                   style={{
                     width: '100%',
                     height: '100%',
-                    // Use visibility hidden for far items to keep DOM node but skip paint
-                    visibility: Math.abs(offset) > 2 ? 'hidden' : 'visible', 
+                    visibility: isVisible ? 'visible' : 'hidden', 
                     pointerEvents: isVisible ? 'auto' : 'none',
                   }}
                 >
@@ -147,7 +147,7 @@ export const CoverCarousel: React.FC = () => {
 
           {/* Song Info */}
           <motion.div 
-            key={activeSong.id} // Re-mount text for fade effect
+            key={activeSong.id} 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}

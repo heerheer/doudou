@@ -8,7 +8,7 @@ interface LyricLine {
 }
 
 export const LyricView: React.FC = () => {
-  const { currentSong, isLyricViewOpen, audioState } = usePlayer();
+  const { currentSong, isLyricViewOpen, audioState, seek } = usePlayer();
   const [lyrics, setLyrics] = useState<LyricLine[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -26,31 +26,49 @@ export const LyricView: React.FC = () => {
     setActiveIndex(0);
 
     fetch(currentSong.lyricUrl)
-      .then(async res => (await res.json())['lyric'])
+      .then(async res => {
+          const text = await res.text();
+          try {
+             // Try parsing as JSON first (common for some APIs)
+             const json = JSON.parse(text);
+             return typeof json.lyric === 'string' ? json.lyric : text;
+          } catch {
+             // If JSON parse fails, it's likely plain text (standard LRC)
+             return text;
+          }
+      })
       .then(text => {
         const parsedLines: LyricLine[] = [];
         // Regex to match [mm:ss.xx]Text
-        const regex = /\[(\d{2}):(\d{2}\.\d{2,3})\](.*)/;
+        // Matches [00:00.00] or [00:00]
+        const regex = /\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?\](.*)/;
 
         text.split('\n').forEach(line => {
           const match = line.match(regex);
           if (match) {
             const minutes = parseInt(match[1], 10);
-            const seconds = parseFloat(match[2]);
-            const content = match[3].trim();
-            if (content) { // skip empty lines
+            const seconds = parseInt(match[2], 10);
+            const ms = match[3] ? parseFloat("0." + match[3]) : 0;
+            const content = match[4].trim();
+            
+            if (content) { 
               parsedLines.push({
-                time: minutes * 60 + seconds,
+                time: minutes * 60 + seconds + ms,
                 text: content
               });
             }
           }
         });
-        setLyrics(parsedLines);
+        
+        if (parsedLines.length === 0) {
+             setLyrics([{ time: 0, text: "纯音乐 / No Lyrics" }]);
+        } else {
+             setLyrics(parsedLines);
+        }
       })
       .catch(err => {
         console.error("Failed to load lyrics", err);
-        setLyrics([{ time: 0, text: "暂无歌词 / No Lyrics" }]);
+        setLyrics([{ time: 0, text: "歌词加载失败 / Failed to load" }]);
       });
 
   }, [currentSong]);
@@ -59,9 +77,6 @@ export const LyricView: React.FC = () => {
   useEffect(() => {
     if (lyrics.length === 0) return;
 
-    // Find the current active line index
-    // The active line is the one where currentTime >= line.time, 
-    // and (next line exists implies currentTime < nextLine.time)
     const currentTime = audioState.currentTime;
     let newIndex = lyrics.findIndex((line, i) => {
       const nextTime = lyrics[i + 1]?.time || Infinity;
@@ -86,7 +101,6 @@ export const LyricView: React.FC = () => {
         const container = containerRef.current;
         
         // Calculate the scroll position to center the active element
-        // Offset: (Container Height / 2) - (Element Height / 2)
         const offset = activeEl!.offsetTop - container.clientHeight / 2 + activeEl!.clientHeight / 2;
 
         container.scrollTo({
@@ -145,8 +159,8 @@ export const LyricView: React.FC = () => {
                                   }
                               `}
                               onClick={() => {
-                                // Optional: Tap line to seek
-                                // seek(line.time); 
+                                // Tap lyric line to seek to that position
+                                seek(line.time); 
                               }}
                           >
                               <p className="py-1 leading-relaxed">{line.text}</p>

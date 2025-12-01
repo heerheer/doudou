@@ -1,10 +1,20 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Pause, SkipForward, SkipBack, ListMusic } from 'lucide-react';
 import { usePlayer } from '../App';
 
 export const BottomPlayerDock: React.FC = () => {
-  const { currentSong, audioState, togglePlayPause, setLyricViewOpen, nextSong, prevSong } = usePlayer();
+  const { currentSong, audioState, togglePlayPause, setLyricViewOpen, nextSong, prevSong, seek } = usePlayer();
+  const progressBarRef = useRef<HTMLDivElement>(null);
+
+  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!progressBarRef.current || !currentSong || !audioState.duration) return;
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    // Clamp between 0 and 1
+    const percentage = Math.min(Math.max(x / rect.width, 0), 1);
+    seek(percentage * audioState.duration);
+  };
 
   if (!currentSong) return null;
 
@@ -77,12 +87,29 @@ export const BottomPlayerDock: React.FC = () => {
           </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="w-full h-1 bg-theme-subtext/20 rounded-full overflow-hidden cursor-pointer group">
-          <motion.div 
-            className="h-full bg-theme-accent"
-            style={{ width: `${audioState.progress}%` }}
-            layoutId="progressBar"
+        {/* Progress Bar with Seek Capability */}
+        <div 
+            ref={progressBarRef}
+            onClick={handleSeek}
+            className="group relative w-full flex items-center py-2 cursor-pointer touch-none"
+        >
+          {/* Background Track */}
+          <div className="w-full h-1 bg-theme-text bg- rounded-full overflow-hidden">
+            <motion.div 
+                className="h-full bg-theme-accent"
+                style={{ width: `${audioState.progress}%` }}
+                layoutId="progressBar"
+            />
+          </div>
+
+          {/* Scrubber Knob (Visible on Hover/Drag) */}
+          <div 
+             className="absolute h-3 w-3 bg-theme-text rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
+             style={{ 
+                 left: `${audioState.progress}%`, 
+                 transform: 'translateX(-50%)',
+                 boxShadow: '0 0 10px var(--theme-accent)'
+             }} 
           />
         </div>
       </div>
