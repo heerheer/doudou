@@ -1,51 +1,5 @@
 import { Song } from './types';
 
-// Mock audio URLs
-const DEMO_AUDIO = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
-
-// Helper to create data URI for lyrics to simulate fetching from a URL
-const createLrcDataUri = (lrc: string) => `data:text/plain;charset=utf-8,${encodeURIComponent(lrc)}`;
-
-const lrc1 = `[00:00.00] (前奏)
-[00:15.00] 虚空寂静之中
-[00:20.00] 金尘落于肌肤
-[00:28.00] 我们向古日祈祷
-[00:35.00] 祈求光芒引路
-[00:45.00] (间奏)
-[01:00.00] 神殿永恒伫立
-[01:10.00] 观望世界交汇
-[01:20.00] 灵魂的共鸣
-[01:30.00] 在此刻苏醒`;
-
-const lrc2 = `[00:00.00] (前奏)
-[00:10.00] 雪上猩红的泪
-[00:20.00] 往昔记忆如碎
-[00:30.00] 紧握昨日残像
-[00:40.00] 在消逝前凝望
-[00:50.00] 那红豆生南国
-[01:00.00] 此物最相思`;
-
-const lrc3 = `[00:05.00] 踏入这扇门
-[00:15.00] 抛下你的恐惧
-[00:25.00] 众灵在此静候
-[00:35.00] 寻找那颗真心
-[00:45.00] 圣域的光辉
-[00:55.00] 照亮归途`;
-
-const lrc4 = `[00:00.00] 困于其中
-[00:05.00] 光的世界
-[00:15.00] 美丽却冰冷
-[00:25.00] 无人知晓的故事
-[00:35.00] 金色的笼子
-[00:45.00] 锁住了自由`;
-
-const lrc5 = `[00:00.00] 叮... 咚...
-[00:10.00] 醒来吧 孩子
-[00:20.00] 黎明已至
-[00:30.00] 长夜终尽
-[00:40.00] 晨钟敲响
-[00:50.00] 新的篇章`;
-
 export const SONGS: Song[] = [
   {
     id: '1',
@@ -72,6 +26,32 @@ export const SONGS: Song[] = [
       }
     },
     lyricUrl: "https://api.lrc.cx/lyrics?title=%E5%97%B5%E5%97%B5"
+  },
+  {
+    id: '6',
+    title: "南三环东路", //2052454512
+    artist: "DOUDOU",
+    coverUrl: "https://p2.music.126.net/oEjZdksnQLrqLuDLWgoE2Q==/109951168652913819.jpg",
+    audioUrl: "https://doudou-r2.realme.top/audios/DOUDOU%20-%20%E5%8D%97%E4%B8%89%E7%8E%AF%E4%B8%9C%E8%B7%AF.flac",
+    theme: {
+      dark: {
+        base: '#0f1217',                  // 城市夜里的深灰蓝，像南三环冬夜的天色
+        surface: 'rgba(25, 29, 36, 0.75)', // 路边楼影的暗蓝灰
+        text: '#f1f5f7',                  // 冷白，像雾里的路灯
+        subtext: '#9aa2ab',               // 淡蓝灰，疲惫却柔和
+        accent: '#f6a44f',                // 路灯橙、出租车灯、家的那点暖色
+        glow: 'rgba(246, 164, 79, 0.28)', // 悄悄溢出来的暖光，不热、但在发亮
+      },
+      light: {
+        base: '#f4f6f8',                  // 很淡的雾白，像清晨回家的天光
+        surface: 'rgba(255, 255, 255, 0.85)',
+        text: '#1f2935',                  // 深蓝灰的文字，像积下来的疲惫
+        subtext: '#4b5563',               // 城市的混凝土色
+        accent: '#ea8a2f',                // 更暖一点的橙，像进家门前最后那盏灯
+        glow: 'rgba(234, 138, 47, 0.20)', // 柔光，像暖气吹出的那口热气
+      }
+    },
+    lyricUrl: "https://api.bugpk.com/api/163_music?ids=2052454512&level=standard&type=json"
   },
   {
     id: '2',

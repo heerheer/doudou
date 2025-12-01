@@ -18,7 +18,7 @@ export const TopMiniDock: React.FC = () => {
         >
           {/* Dynamic Island Container */}
           <div 
-            className="pointer-events-auto relative flex items-center gap-3 pl-2 pr-2 py-1.5 rounded-full shadow-lg backdrop-blur-xl border transition-colors duration-500 bg-theme-surface border-theme-accent/30 text-theme-accent shadow-theme-glow min-w-[180px] max-w-[280px]"
+            className="pointer-events-auto relative flex items-center gap-3 pl-2 pr-2 py-1.5 rounded-full shadow-lg backdrop-blur-xl border transition-colors duration-500 bg-theme-surface border-theme-accent/30 text-theme-accent shadow-theme-glow min-w-[180px] max-w-[240px]"
           >
             {/* Tiny Cover Art */}
             <motion.div 

@@ -49,7 +49,7 @@ export const BottomPlayerDock: React.FC = () => {
           <div className="flex items-center gap-4">
              <button 
               onClick={prevSong}
-              className="hidden md:block hover:scale-110 transition-transform text-theme-subtext hover:text-theme-accent"
+              className="md:block hover:scale-110 transition-transform text-theme-subtext hover:text-theme-accent"
             >
               <SkipBack size={20} fill="currentColor" />
             </button>
