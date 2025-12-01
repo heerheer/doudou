@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence, PanInfo, useMotionValue, useTransform } from 'framer-motion';
+import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { SONGS } from '../constants';
 import { usePlayer } from '../App';
 import { PlayCircle } from 'lucide-react';
