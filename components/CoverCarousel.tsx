@@ -39,6 +39,39 @@ export const CoverCarousel: React.FC = () => {
     }
   }, [activeIndex]);
 
+  // Mouse wheel handler for desktop horizontal scrolling
+  useEffect(() => {
+    if (isMobile || isLyricViewOpen) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Prevent default scrolling
+      e.preventDefault();
+      
+      // Use deltaY (vertical scroll) for horizontal navigation
+      // Positive deltaY = scroll down = next song
+      // Negative deltaY = scroll up = previous song
+      const delta = e.deltaY;
+      const threshold = 50; // Minimum scroll amount to trigger navigation
+      
+      if (Math.abs(delta) > threshold) {
+        if (delta > 0) {
+          // Scroll down -> next song
+          setActiveIndex((prev) => (prev + 1) % SONGS.length);
+        } else {
+          // Scroll up -> previous song
+          setActiveIndex((prev) => (prev - 1 + SONGS.length) % SONGS.length);
+        }
+      }
+    };
+
+    // Add wheel event listener to the carousel container
+    const carousel = document.querySelector('.carousel-container');
+    if (carousel) {
+      carousel.addEventListener('wheel', handleWheel, { passive: false });
+      return () => carousel.removeEventListener('wheel', handleWheel);
+    }
+  }, [isMobile, isLyricViewOpen, SONGS.length]);
+
   const handleDrag = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     // Convert drag distance to continuous offset
     // Positive drag (right) should show previous song (move carousel left)
@@ -85,7 +118,7 @@ export const CoverCarousel: React.FC = () => {
           className="relative w-full h-[60vh] md:h-[70vh] flex flex-col items-center justify-center perspective-1000"
         >
           {/* Carousel Container */}
-          <div className="relative w-64 h-64 md:w-96 md:h-96 flex items-center justify-center">
+          <div className="carousel-container relative w-64 h-64 md:w-96 md:h-96 flex items-center justify-center">
             {SONGS.map((song, index) => {
               const baseOffset = getOffset(index, activeIndex, SONGS.length);
               // Add continuous offset for smooth dragging
