@@ -5,7 +5,7 @@ import { usePlayer } from '../App';
 import { PlayCircle } from 'lucide-react';
 
 export const CoverCarousel: React.FC = () => {
-  const { currentSong, playSong, isLyricViewOpen } = usePlayer();
+  const { currentSong, playSong, selectSong, isLyricViewOpen } = usePlayer();
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -17,13 +17,23 @@ export const CoverCarousel: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Sync activeIndex with currently playing song (e.g. when using Next/Prev buttons)
+  // Sync activeIndex FROM currently playing song (e.g. when using Bottom Dock Next/Prev)
   useEffect(() => {
     if (currentSong) {
       const index = SONGS.findIndex(s => s.id === currentSong.id);
-      if (index >= 0) setActiveIndex(index);
+      if (index >= 0 && index !== activeIndex) {
+          setActiveIndex(index);
+      }
     }
   }, [currentSong]);
+
+  // Sync currentSong TO activeIndex (when Browsing/Dragging)
+  useEffect(() => {
+    const selectedSong = SONGS[activeIndex];
+    if (currentSong?.id !== selectedSong.id) {
+        selectSong(selectedSong);
+    }
+  }, [activeIndex]);
 
   const handleDragEnd = (event: any, info: any) => {
     const threshold = 20; 
@@ -109,7 +119,7 @@ export const CoverCarousel: React.FC = () => {
                     if (isActive) {
                         playSong(song);
                     } else if (Math.abs(offset) <= 1) {
-                        // Click immediate neighbor to navigate
+                        // Click immediate neighbor to navigate (selects song via activeIndex effect)
                         if (offset === 1) setActiveIndex((prev) => (prev + 1) % SONGS.length);
                         if (offset === -1) setActiveIndex((prev) => (prev - 1 + SONGS.length) % SONGS.length);
                     }

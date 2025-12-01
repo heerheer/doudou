@@ -35,6 +35,11 @@ const App: React.FC = () => {
   useEffect(() => {
     const audio = audioRef.current;
     
+    // Initialize first song
+    if (currentSong && !audio.src) {
+        audio.src = currentSong.audioUrl;
+    }
+
     const handleTimeUpdate = () => {
       if (audio.duration) {
         setAudioState(prev => ({
@@ -60,6 +65,7 @@ const App: React.FC = () => {
     };
   }, []);
 
+  // Play immediately
   const playSong = (song: Song) => {
     if (currentSong?.id === song.id && audioState.isPlaying) {
       setLyricViewOpen(true);
@@ -71,6 +77,19 @@ const App: React.FC = () => {
     audioRef.current.play();
     setAudioState(prev => ({ ...prev, isPlaying: true }));
     setLyricViewOpen(true); // Open view on play
+  };
+
+  // Select without playing (Preview / Browsing)
+  const selectSong = (song: Song) => {
+    if (currentSong?.id === song.id) return;
+    
+    // Switch context: Pause previous, load new, but don't play
+    audioRef.current.pause();
+    audioRef.current.src = song.audioUrl;
+    audioRef.current.currentTime = 0;
+    
+    setCurrentSong(song);
+    setAudioState(prev => ({ ...prev, isPlaying: false, progress: 0, currentTime: 0 }));
   };
 
   const togglePlayPause = () => {
@@ -129,6 +148,7 @@ const App: React.FC = () => {
       isLyricViewOpen,
       toggleTheme,
       playSong,
+      selectSong,
       togglePlayPause,
       setLyricViewOpen,
       seek,

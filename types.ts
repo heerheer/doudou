@@ -37,6 +37,7 @@ export interface PlayerContextType {
   isLyricViewOpen: boolean;
   toggleTheme: () => void;
   playSong: (song: Song) => void;
+  selectSong: (song: Song) => void;
   togglePlayPause: () => void;
   setLyricViewOpen: (open: boolean) => void;
   seek: (time: number) => void;
