@@ -1,13 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { SONGS } from '../constants';
 import { usePlayer } from '../App';
 import { PlayCircle } from 'lucide-react';
+
+// Drag sensitivity factor
+const DRAG_SENSITIVITY = 0.5;
 
 export const CoverCarousel: React.FC = () => {
   const { currentSong, playSong, selectSong, isLyricViewOpen } = usePlayer();
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const [continuousOffset, setContinuousOffset] = useState(0); // Fractional offset for smooth scrolling
+  const carouselRef = useRef<HTMLDivElement>(null); // Ref for carousel container
 
   // Responsive check
   useEffect(() => {
@@ -35,13 +40,61 @@ export const CoverCarousel: React.FC = () => {
     }
   }, [activeIndex]);
 
-  const handleDragEnd = (event: any, info: any) => {
-    const threshold = 20; 
-    if (info.offset.x < -threshold) {
-      setActiveIndex((prev) => (prev + 1) % SONGS.length);
-    } else if (info.offset.x > threshold) {
-      setActiveIndex((prev) => (prev - 1 + SONGS.length) % SONGS.length);
-    }
+  // Mouse wheel handler for desktop horizontal scrolling
+  useEffect(() => {
+    if (isMobile || isLyricViewOpen) return;
+
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Prevent default scrolling
+      e.preventDefault();
+      
+      // Use deltaY (vertical scroll) for horizontal navigation
+      // Positive deltaY = scroll down = next song
+      // Negative deltaY = scroll up = previous song
+      const delta = e.deltaY;
+      const threshold = 50; // Minimum scroll amount to trigger navigation
+      
+      if (Math.abs(delta) > threshold) {
+        if (delta > 0) {
+          // Scroll down -> next song
+          setActiveIndex((prev) => (prev + 1) % SONGS.length);
+        } else {
+          // Scroll up -> previous song
+          setActiveIndex((prev) => (prev - 1 + SONGS.length) % SONGS.length);
+        }
+      }
+    };
+
+    // Add wheel event listener to the carousel container
+    carousel.addEventListener('wheel', handleWheel, { passive: false });
+    return () => carousel.removeEventListener('wheel', handleWheel);
+  }, [isMobile, isLyricViewOpen, SONGS.length]);
+
+  const handleDrag = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    // Convert drag distance to continuous offset
+    // Positive drag (right) should show previous song (move carousel left)
+    const cardWidth = isMobile ? 256 : 384;
+    const dragInCards = info.offset.x / (cardWidth * DRAG_SENSITIVITY);
+    setContinuousOffset(dragInCards);
+  };
+
+  const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    // Calculate how many cards were skipped
+    const cardWidth = isMobile ? 256 : 384;
+    const dragInCards = info.offset.x / (cardWidth * DRAG_SENSITIVITY);
+    const skipCount = Math.round(dragInCards);
+    
+    // Update active index - positive drag means going backwards
+    setActiveIndex((prev) => {
+      const newIndex = (prev - skipCount) % SONGS.length;
+      return newIndex < 0 ? newIndex + SONGS.length : newIndex;
+    });
+    
+    // Reset continuous offset
+    setContinuousOffset(0);
   };
 
   const activeSong = SONGS[activeIndex];
@@ -66,11 +119,16 @@ export const CoverCarousel: React.FC = () => {
           className="relative w-full h-[60vh] md:h-[70vh] flex flex-col items-center justify-center perspective-1000"
         >
           {/* Carousel Container */}
-          <div className="relative w-64 h-64 md:w-96 md:h-96 flex items-center justify-center">
+          <div 
+            ref={carouselRef}
+            className="carousel-container relative w-64 h-64 md:w-96 md:h-96 flex items-center justify-center"
+          >
             {SONGS.map((song, index) => {
-              const offset = getOffset(index, activeIndex, SONGS.length);
-              const isActive = offset === 0;
-              const isVisible = Math.abs(offset) <= 2; // Increased visibility range for mobile stack
+              const baseOffset = getOffset(index, activeIndex, SONGS.length);
+              // Add continuous offset for smooth dragging
+              const offset = baseOffset + continuousOffset;
+              const isActive = Math.abs(baseOffset) < 0.5;
+              const isVisible = Math.abs(offset) <= 3;
 
               // Styles calculation based on offset
               let animateProps = {};
@@ -82,7 +140,7 @@ export const CoverCarousel: React.FC = () => {
                   y: Math.abs(offset) * 10, // Slight drop for background cards
                   scale: 1 - Math.abs(offset) * 0.15, // Scale down background
                   opacity: isVisible ? (isActive ? 1 : 0.5) : 0, // Lower opacity for background
-                  zIndex: 20 - Math.abs(offset), // Layering
+                  zIndex: Math.round(20 - Math.abs(offset)), // Layering
                   rotateY: 0, // No rotation for cleaner look
                   rotateZ: offset * 5, // Slight tilt
                 };
@@ -92,7 +150,7 @@ export const CoverCarousel: React.FC = () => {
                   x: offset * 110 + '%',
                   scale: isActive ? 1 : 0.85,
                   opacity: isVisible ? (isActive ? 1 : 0.4) : 0,
-                  zIndex: isActive ? 20 : (10 - Math.abs(offset)),
+                  zIndex: isActive ? 20 : Math.round(10 - Math.abs(offset)),
                   rotateY: offset * -15, 
                   rotateZ: 0,
                 };
@@ -114,14 +172,15 @@ export const CoverCarousel: React.FC = () => {
                   drag={isActive ? "x" : false}
                   dragConstraints={{ left: 0, right: 0 }}
                   dragElastic={0.1}
-                  onDragEnd={handleDragEnd}
+                  onDrag={isActive ? handleDrag : undefined}
+                  onDragEnd={isActive ? handleDragEnd : undefined}
                   onClick={() => {
                     if (isActive) {
                         playSong(song);
-                    } else if (Math.abs(offset) <= 1) {
-                        // Click immediate neighbor to navigate (selects song via activeIndex effect)
-                        if (offset === 1) setActiveIndex((prev) => (prev + 1) % SONGS.length);
-                        if (offset === -1) setActiveIndex((prev) => (prev - 1 + SONGS.length) % SONGS.length);
+                    } else if (Math.abs(baseOffset) <= 1) {
+                        // Click immediate neighbor to navigate
+                        if (baseOffset === 1) setActiveIndex((prev) => (prev + 1) % SONGS.length);
+                        if (baseOffset === -1) setActiveIndex((prev) => (prev - 1 + SONGS.length) % SONGS.length);
                     }
                   }}
                   style={{
