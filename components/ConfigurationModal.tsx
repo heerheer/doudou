@@ -44,7 +44,8 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md"
+            className="fixed top-1/2 left-1/2 z-50 w-full max-w-md px-4"
+            style={{ transform: 'translate(-50%, -50%)' }}
           >
             <div className="bg-theme-surface backdrop-blur-xl border border-theme-accent/30 rounded-2xl shadow-2xl shadow-theme-glow p-6">
               {/* Header */}
