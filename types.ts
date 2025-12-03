@@ -23,6 +23,9 @@ export interface ColorTheme {
 
 export type Theme = 'dark' | 'light';
 
+// 这是对theme.json的约束
+export type ThemeEntry = { base?: string; theme?: { dark: ColorTheme; light: ColorTheme } };
+
 export interface AudioState {
   isPlaying: boolean;
   progress: number; // 0 to 100

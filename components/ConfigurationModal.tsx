@@ -49,10 +49,10 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
             <div className="bg-theme-surface w-full max-w-md backdrop-blur-xl border border-theme-accent/30 rounded-2xl shadow-2xl shadow-theme-glow p-6">
               {/* Header */}
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-theme-text">Configure Music Source</h2>
+                <h2 className="text-xl font-bold text-theme-text">配置DOU音源</h2>
                 <button
                   onClick={onClose}
-                  className="p-1 rounded-full transition-colors text-theme-subtext hover:bg-theme-accent/20 hover:text-theme-text"
+                  className="p-1 rounded-full transition-colors text-theme-base hover:bg-theme-accent/20 hover:text-theme-text"
                 >
                   <X size={20} />
                 </button>
@@ -62,7 +62,7 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
               <form onSubmit={handleSubmit}>
                 <div className="mb-4">
                   <label htmlFor="url-input" className="block text-sm font-medium text-theme-subtext mb-2">
-                    JSON URL
+                    JSON 数据源 URL
                   </label>
                   <input
                     id="url-input"
@@ -80,13 +80,13 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                     onClick={onClose}
                     className="px-4 py-2 rounded-lg text-theme-subtext hover:bg-theme-accent/20 transition-colors"
                   >
-                    Cancel
+                    取消
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded-lg bg-theme-accent text-white hover:opacity-90 transition-opacity"
+                    className="px-4 py-2 rounded-lg bg-theme-accent text-theme-base hover:opacity-90 transition-opacity"
                   >
-                    Load
+                    加载音源
                   </button>
                 </div>
               </form>
