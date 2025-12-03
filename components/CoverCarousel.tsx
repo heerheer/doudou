@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
-import { SONGS } from '../constants';
 import { usePlayer } from '../App';
 import { PlayCircle } from 'lucide-react';
 
@@ -8,7 +7,7 @@ import { PlayCircle } from 'lucide-react';
 const DRAG_SENSITIVITY = 0.5;
 
 export const CoverCarousel: React.FC = () => {
-  const { currentSong, playSong, selectSong, isLyricViewOpen } = usePlayer();
+  const { currentSong, playSong, selectSong, isLyricViewOpen, playlist } = usePlayer();
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [continuousOffset, setContinuousOffset] = useState(0); // Fractional offset for smooth scrolling
@@ -25,7 +24,7 @@ export const CoverCarousel: React.FC = () => {
   // Sync activeIndex FROM currently playing song (e.g. when using Bottom Dock Next/Prev)
   useEffect(() => {
     if (currentSong) {
-      const index = SONGS.findIndex(s => s.id === currentSong.id);
+      const index = playlist.findIndex(s => s.id === currentSong.id);
       if (index >= 0 && index !== activeIndex) {
           setActiveIndex(index);
       }
@@ -34,15 +33,16 @@ export const CoverCarousel: React.FC = () => {
 
   // Sync currentSong TO activeIndex (when Browsing/Dragging)
   useEffect(() => {
-    const selectedSong = SONGS[activeIndex];
-    if (currentSong?.id !== selectedSong.id) {
+    if (playlist.length === 0) return;
+    const selectedSong = playlist[activeIndex];
+    if (selectedSong && currentSong?.id !== selectedSong.id) {
         selectSong(selectedSong);
     }
   }, [activeIndex]);
 
   // Mouse wheel handler for desktop horizontal scrolling
   useEffect(() => {
-    if (isMobile || isLyricViewOpen) return;
+    if (isMobile || isLyricViewOpen || playlist.length === 0) return;
 
     const carousel = carouselRef.current;
     if (!carousel) return;
@@ -60,10 +60,10 @@ export const CoverCarousel: React.FC = () => {
       if (Math.abs(delta) > threshold) {
         if (delta > 0) {
           // Scroll down -> next song
-          setActiveIndex((prev) => (prev + 1) % SONGS.length);
+          setActiveIndex((prev) => (prev + 1) % playlist.length);
         } else {
           // Scroll up -> previous song
-          setActiveIndex((prev) => (prev - 1 + SONGS.length) % SONGS.length);
+          setActiveIndex((prev) => (prev - 1 + playlist.length) % playlist.length);
         }
       }
     };
@@ -71,7 +71,7 @@ export const CoverCarousel: React.FC = () => {
     // Add wheel event listener to the carousel container
     carousel.addEventListener('wheel', handleWheel, { passive: false });
     return () => carousel.removeEventListener('wheel', handleWheel);
-  }, [isMobile, isLyricViewOpen, SONGS.length]);
+  }, [isMobile, isLyricViewOpen, playlist.length]);
 
   const handleDrag = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     // Convert drag distance to continuous offset
@@ -89,15 +89,15 @@ export const CoverCarousel: React.FC = () => {
     
     // Update active index - positive drag means going backwards
     setActiveIndex((prev) => {
-      const newIndex = (prev - skipCount) % SONGS.length;
-      return newIndex < 0 ? newIndex + SONGS.length : newIndex;
+      const newIndex = (prev - skipCount) % playlist.length;
+      return newIndex < 0 ? newIndex + playlist.length : newIndex;
     });
     
     // Reset continuous offset
     setContinuousOffset(0);
   };
 
-  const activeSong = SONGS[activeIndex];
+  const activeSong = playlist.length > 0 ? playlist[activeIndex] : null;
 
   // Helper to calculate circular distance
   // Returns: 0 (active), 1 (right), -1 (left), etc.
@@ -107,6 +107,11 @@ export const CoverCarousel: React.FC = () => {
     if (diff < -length / 2) diff += length;
     return diff;
   };
+
+  // Don't render carousel if no playlist
+  if (playlist.length === 0) {
+    return null;
+  }
 
   return (
     <AnimatePresence>
@@ -123,8 +128,8 @@ export const CoverCarousel: React.FC = () => {
             ref={carouselRef}
             className="carousel-container relative w-64 h-64 md:w-96 md:h-96 flex items-center justify-center"
           >
-            {SONGS.map((song, index) => {
-              const baseOffset = getOffset(index, activeIndex, SONGS.length);
+            {playlist.map((song, index) => {
+              const baseOffset = getOffset(index, activeIndex, playlist.length);
               // Add continuous offset for smooth dragging
               const offset = baseOffset + continuousOffset;
               const isActive = Math.abs(baseOffset) < 0.5;
@@ -179,8 +184,8 @@ export const CoverCarousel: React.FC = () => {
                         playSong(song);
                     } else if (Math.abs(baseOffset) <= 1) {
                         // Click immediate neighbor to navigate
-                        if (baseOffset === 1) setActiveIndex((prev) => (prev + 1) % SONGS.length);
-                        if (baseOffset === -1) setActiveIndex((prev) => (prev - 1 + SONGS.length) % SONGS.length);
+                        if (baseOffset === 1) setActiveIndex((prev) => (prev + 1) % playlist.length);
+                        if (baseOffset === -1) setActiveIndex((prev) => (prev - 1 + playlist.length) % playlist.length);
                     }
                   }}
                   style={{

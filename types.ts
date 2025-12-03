@@ -5,6 +5,7 @@ export interface Song {
   coverUrl: string;
   audioUrl: string;
   lyricUrl: string;
+  base?: string;
   theme: {
     dark: ColorTheme;
     light: ColorTheme;
