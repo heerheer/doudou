@@ -44,10 +44,9 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed top-1/2 left-1/2 z-50 w-full max-w-md px-4"
-            style={{ transform: 'translate(-50%, -50%)' }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
           >
-            <div className="bg-theme-surface backdrop-blur-xl border border-theme-accent/30 rounded-2xl shadow-2xl shadow-theme-glow p-6">
+            <div className="bg-theme-surface w-full max-w-md backdrop-blur-xl border border-theme-accent/30 rounded-2xl shadow-2xl shadow-theme-glow p-6">
               {/* Header */}
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold text-theme-text">Configure Music Source</h2>
