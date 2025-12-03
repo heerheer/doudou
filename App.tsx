@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { PlayerContextType, Song, AudioState, Theme } from './types';
-import { SONGS } from './constants';
+import { PlayerContextType, Song, AudioState, Theme, ColorTheme, ThemeEntry } from './types';
 import { CoverCarousel } from './components/CoverCarousel';
 import { BottomPlayerDock } from './components/BottomPlayerDock';
 import { TopMiniDock } from './components/TopMiniDock';
 import { LyricView } from './components/LyricView';
-import { Sun, Moon } from 'lucide-react';
-
+import { ConfigurationModal } from './components/ConfigurationModal';
+import { Sun, Moon, Settings } from 'lucide-react';
+import { getDefaultColors } from './utils';
 // --- Context Setup ---
 const PlayerContext = createContext<PlayerContextType | null>(null);
 
@@ -19,7 +19,9 @@ export const usePlayer = () => {
 
 // --- Main App Component ---
 const App: React.FC = () => {
-  const [currentSong, setCurrentSong] = useState<Song | null>(SONGS[0]); 
+  // Initialize with empty playlist - user must configure a data source
+  const [playlist, setPlaylist] = useState<Song[]>([]);
+  const [currentSong, setCurrentSong] = useState<Song | null>(null); // null until songs are loaded
   const [audioState, setAudioState] = useState<AudioState>({
     isPlaying: false,
     progress: 0,
@@ -28,16 +30,87 @@ const App: React.FC = () => {
   });
   const [isLyricViewOpen, setLyricViewOpen] = useState(false);
   const [theme, setTheme] = useState<Theme>('dark');
-  
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [dataSourceUrl, setDataSourceUrl] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>('');
+
   const audioRef = useRef<HTMLAudioElement>(new Audio());
+
+  // --- Data Fetching Logic ---
+  const loadSongsFromUrl = async (url: string) => {
+    setIsLoading(true);
+    setError('');
+    try {
+      // Basic URL validation
+      try {
+        new URL(url);
+      } catch {
+        throw new Error('Invalid URL format');
+      }
+
+      // Fetch with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.statusText}`);
+      }
+      const data = await response.json();
+
+      // Validate that it's an array
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid data format: expected an array');
+      }
+
+      // Validate that array elements have required Song properties
+      if (data.length > 0) {
+        const requiredFields = ['id', 'title', 'artist', 'coverUrl', 'audioUrl', 'lyricUrl'];
+        const invalidSongs = data.filter(song =>
+          !requiredFields.every(field => field in song)
+        );
+        if (invalidSongs.length > 0) {
+          throw new Error('Invalid song data: missing required fields');
+        }
+      }
+
+      setPlaylist(data);
+      setDataSourceUrl(url);
+
+      // Set first song as current if available
+      if (data.length > 0) {
+        setCurrentSong(data[0]);
+      }
+    } catch (err) {
+      let errorMessage = 'Failed to load songs';
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') {
+          errorMessage = 'Request timeout: Failed to load songs';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      setError(errorMessage);
+      console.error('Error loading songs:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleConfigSubmit = (url: string) => {
+    loadSongsFromUrl(url);
+  };
 
   // --- Audio Logic ---
   useEffect(() => {
     const audio = audioRef.current;
-    
+
     // Initialize first song
     if (currentSong && !audio.src) {
-        audio.src = currentSong.audioUrl;
+      audio.src = currentSong.audioUrl;
     }
 
     const handleTimeUpdate = () => {
@@ -82,12 +155,12 @@ const App: React.FC = () => {
   // Select without playing (Preview / Browsing)
   const selectSong = (song: Song) => {
     if (currentSong?.id === song.id) return;
-    
+
     // Switch context: Pause previous, load new, but don't play
     audioRef.current.pause();
     audioRef.current.src = song.audioUrl;
     audioRef.current.currentTime = 0;
-    
+
     setCurrentSong(song);
     setAudioState(prev => ({ ...prev, isPlaying: false, progress: 0, currentTime: 0 }));
   };
@@ -109,17 +182,17 @@ const App: React.FC = () => {
   };
 
   const nextSong = () => {
-    if (!currentSong) return;
-    const idx = SONGS.findIndex(s => s.id === currentSong.id);
-    const nextIdx = (idx + 1) % SONGS.length;
-    playSong(SONGS[nextIdx]);
+    if (!currentSong || playlist.length === 0) return;
+    const idx = playlist.findIndex(s => s.id === currentSong.id);
+    const nextIdx = (idx + 1) % playlist.length;
+    playSong(playlist[nextIdx]);
   };
 
   const prevSong = () => {
-    if (!currentSong) return;
-    const idx = SONGS.findIndex(s => s.id === currentSong.id);
-    const prevIdx = (idx - 1 + SONGS.length) % SONGS.length;
-    playSong(SONGS[prevIdx]);
+    if (!currentSong || playlist.length === 0) return;
+    const idx = playlist.findIndex(s => s.id === currentSong.id);
+    const prevIdx = (idx - 1 + playlist.length) % playlist.length;
+    playSong(playlist[prevIdx]);
   };
 
   const toggleTheme = () => {
@@ -128,8 +201,23 @@ const App: React.FC = () => {
 
   // --- Dynamic Style Injection ---
   // We use this to inject the CSS variables for the current song's theme
-  const activeTheme = currentSong ? currentSong.theme[theme] : SONGS[0].theme[theme];
-  
+  // Default theme when no song is loaded
+
+  // song base 是用于寻找主题基调的唯一标识
+  const songBaseName = currentSong && (currentSong as any).base ? (currentSong as any).base : undefined;
+  const defaultColors = getDefaultColors(theme, songBaseName);
+  const songThemePartial = currentSong
+    ? ((currentSong as any).theme?.[theme] ?? (currentSong as any).theme ?? {})
+    : {};
+  // 歌曲主题优先于全局主题
+  const activeTheme: ColorTheme = {
+    base: songThemePartial.base ?? defaultColors.base,
+    surface: songThemePartial.surface ?? defaultColors.surface,
+    text: songThemePartial.text ?? defaultColors.text,
+    subtext: songThemePartial.subtext ?? defaultColors.subtext,
+    accent: songThemePartial.accent ?? defaultColors.accent,
+    glow: songThemePartial.glow ?? defaultColors.glow,
+  };
   const styleVariables = {
     '--theme-base': activeTheme.base,
     '--theme-surface': activeTheme.surface,
@@ -142,7 +230,7 @@ const App: React.FC = () => {
   return (
     <PlayerContext.Provider value={{
       currentSong,
-      playlist: SONGS,
+      playlist: playlist,
       audioState,
       theme,
       isLyricViewOpen,
@@ -155,32 +243,82 @@ const App: React.FC = () => {
       nextSong,
       prevSong
     }}>
-      <div 
+      <div
         className="relative w-full h-screen overflow-hidden transition-colors duration-1000 ease-in-out bg-theme-base"
         style={styleVariables}
       >
         {/* Background Atmosphere */}
         <div className={`absolute inset-0 bg-noise opacity-[0.03] pointer-events-none z-0 mix-blend-overlay`} />
-        
+
         {/* Dynamic Light Effect - Background Blob */}
-        <div 
-            className="absolute top-[-20%] left-[-10%] w-[70vw] h-[70vw] rounded-full blur-[120px] transition-all duration-1000 opacity-40 mix-blend-screen"
-            style={{ backgroundColor: activeTheme.accent }}
+        <div
+          className="absolute top-[-20%] left-[-10%] w-[70vw] h-[70vw] rounded-full blur-[120px] transition-all duration-1000 opacity-40 mix-blend-screen"
+          style={{ backgroundColor: activeTheme.accent }}
         />
-        <div 
-            className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full blur-[100px] transition-all duration-1000 opacity-20 mix-blend-screen"
-             style={{ backgroundColor: activeTheme.accent }}
+        <div
+          className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full blur-[100px] transition-all duration-1000 opacity-20 mix-blend-screen"
+          style={{ backgroundColor: activeTheme.accent }}
         />
 
-        {/* Header / Theme Toggle */}
-        <header className="fixed top-0 left-0 w-full p-6 z-30 flex justify-end items-start pointer-events-none">
-          <button 
+        {/* Header / Configuration and Theme Toggle */}
+        <header className="fixed top-0 left-0 w-full p-6 z-30 flex justify-between items-start pointer-events-none">
+          <button
+            onClick={() => setIsConfigModalOpen(true)}
+            className="pointer-events-auto p-2 rounded-full transition-colors text-theme-subtext hover:bg-theme-surface"
+            title="Configure Music Source"
+          >
+            <Settings size={20} />
+          </button>
+          <button
             onClick={toggleTheme}
             className="pointer-events-auto p-2 rounded-full transition-colors text-theme-subtext hover:bg-theme-surface"
           >
             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
           </button>
         </header>
+
+        {/* Configuration Modal */}
+        <ConfigurationModal
+          isOpen={isConfigModalOpen}
+          onClose={() => setIsConfigModalOpen(false)}
+          onSubmit={handleConfigSubmit}
+          currentUrl={dataSourceUrl}
+        />
+
+        {/* Loading/Error State */}
+        {isLoading && (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="text-theme-text text-lg">Loading songs...</div>
+          </div>
+        )}
+        {error && (
+          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 bg-red-500/90 text-white px-4 py-2 rounded-lg shadow-lg">
+            {error}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && playlist.length === 0 && (
+          <div className="fixed inset-0 z-10 flex items-center justify-center">
+            <div className="text-center">
+                <div className="mb-4">
+                <img
+                  src="/assets/wbwyzhh.jpg"
+                  alt="欢迎"
+                  className="mx-auto w-48 h-48 rounded-lg object-cover shadow-lg"
+                />
+                </div>
+                <h2 className="text-2xl font-bold text-theme-text mb-4">欢迎来到小赫的DOUDOU播放器</h2>
+              <p className="text-theme-subtext mb-6">请点击左上角设置，填入DOU音数据源!</p>
+              <button
+                onClick={() => setIsConfigModalOpen(true)}
+                className="px-6 py-3 bg-theme-accent text-theme-base rounded-lg hover:opacity-90 transition-opacity"
+              >
+                和我一起,维护音乐版权!
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Main Content Area */}
         <main className="relative z-10 w-full h-full flex flex-col items-center justify-center">

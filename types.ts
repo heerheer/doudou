@@ -5,7 +5,8 @@ export interface Song {
   coverUrl: string;
   audioUrl: string;
   lyricUrl: string;
-  theme: {
+  base?: string; // Optional base URL for relative paths in song resources
+  theme?: {
     dark: ColorTheme;
     light: ColorTheme;
   }
@@ -21,6 +22,9 @@ export interface ColorTheme {
 }
 
 export type Theme = 'dark' | 'light';
+
+// 这是对theme.json的约束
+export type ThemeEntry = { base?: string; theme?: { dark: ColorTheme; light: ColorTheme } };
 
 export interface AudioState {
   isPlaying: boolean;
