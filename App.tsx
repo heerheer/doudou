@@ -19,8 +19,9 @@ export const usePlayer = () => {
 
 // --- Main App Component ---
 const App: React.FC = () => {
+  // Initialize with empty playlist - user must configure a data source
   const [playlist, setPlaylist] = useState<Song[]>([]); 
-  const [currentSong, setCurrentSong] = useState<Song | null>(null); 
+  const [currentSong, setCurrentSong] = useState<Song | null>(null); // null until songs are loaded
   const [audioState, setAudioState] = useState<AudioState>({
     isPlaying: false,
     progress: 0,
@@ -41,7 +42,20 @@ const App: React.FC = () => {
     setIsLoading(true);
     setError('');
     try {
-      const response = await fetch(url);
+      // Basic URL validation
+      try {
+        new URL(url);
+      } catch {
+        throw new Error('Invalid URL format');
+      }
+
+      // Fetch with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      
       if (!response.ok) {
         throw new Error(`Failed to fetch: ${response.statusText}`);
       }
@@ -52,6 +66,17 @@ const App: React.FC = () => {
         throw new Error('Invalid data format: expected an array');
       }
       
+      // Validate that array elements have required Song properties
+      if (data.length > 0) {
+        const requiredFields = ['id', 'title', 'artist', 'coverUrl', 'audioUrl', 'lyricUrl', 'theme'];
+        const invalidSongs = data.filter(song => 
+          !requiredFields.every(field => field in song)
+        );
+        if (invalidSongs.length > 0) {
+          throw new Error('Invalid song data: missing required fields');
+        }
+      }
+      
       setPlaylist(data);
       setDataSourceUrl(url);
       
@@ -60,7 +85,14 @@ const App: React.FC = () => {
         setCurrentSong(data[0]);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load songs';
+      let errorMessage = 'Failed to load songs';
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') {
+          errorMessage = 'Request timeout: Failed to load songs';
+        } else {
+          errorMessage = err.message;
+        }
+      }
       setError(errorMessage);
       console.error('Error loading songs:', err);
     } finally {

@@ -5,7 +5,7 @@ export interface Song {
   coverUrl: string;
   audioUrl: string;
   lyricUrl: string;
-  base?: string;
+  base?: string; // Optional base URL for relative paths in song resources
   theme: {
     dark: ColorTheme;
     light: ColorTheme;
