@@ -4,7 +4,7 @@ import { Play, Pause, SkipForward, SkipBack, ListMusic } from 'lucide-react';
 import { usePlayer } from '../App';
 
 export const BottomPlayerDock: React.FC = () => {
-  const { currentSong, audioState, togglePlayPause, setLyricViewOpen, nextSong, prevSong, seek } = usePlayer();
+  const { currentSong, audioState, togglePlayPause, setLyricViewOpen, nextSong, prevSong, seek,isLyricViewOpen } = usePlayer();
   const progressBarRef = useRef<HTMLDivElement>(null);
 
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -32,7 +32,7 @@ export const BottomPlayerDock: React.FC = () => {
           {/* Left: Info & Open Lyric Click Area */}
           <div 
             className="flex items-center gap-4 flex-1 cursor-pointer group"
-            onClick={() => setLyricViewOpen(true)}
+            onClick={() => setLyricViewOpen(!isLyricViewOpen)}
           >
             {/* Spinning Vinyl Effect on Cover */}
             <div className="w-12 h-12 rounded-full overflow-hidden border-2 shadow-lg relative border-theme-accent/50 transition-colors duration-500">
@@ -81,9 +81,9 @@ export const BottomPlayerDock: React.FC = () => {
               <SkipForward size={20} fill="currentColor" />
             </button>
             
-            <button className="hidden md:block opacity-50 hover:opacity-100 text-theme-subtext hover:text-theme-accent">
+            {/* <button className="hidden md:block opacity-50 hover:opacity-100 text-theme-subtext hover:text-theme-accent">
               <ListMusic size={20} />
-            </button>
+            </button> */}
           </div>
         </div>
 
@@ -94,7 +94,7 @@ export const BottomPlayerDock: React.FC = () => {
             className="group relative w-full flex items-center py-2 cursor-pointer touch-none"
         >
           {/* Background Track */}
-          <div className="w-full h-1 bg-theme-text bg- rounded-full overflow-hidden">
+          <div className="w-full h-1 bg-theme-text rounded-full overflow-hidden">
             <motion.div 
                 className="h-full bg-theme-accent"
                 style={{ width: `${audioState.progress}%` }}
