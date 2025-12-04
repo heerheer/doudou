@@ -1,10 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { usePlayer } from '../App';
 import { PlayCircle } from 'lucide-react';
 
-// Drag sensitivity factor
-const DRAG_SENSITIVITY = 0.5;
+// Touch/drag configuration
+const SWIPE_THRESHOLD = 50; // Minimum distance for a swipe to register
+const VELOCITY_THRESHOLD = 300; // Minimum velocity for a quick swipe
+
+// Wheel scroll configuration
+const WHEEL_COOLDOWN = 200; // Minimum ms between wheel-triggered switches (reduced for smoother feel)
+const WHEEL_THRESHOLD = 20; // Minimum accumulated delta to trigger switch (lowered for better responsiveness)
 
 export const CoverCarousel: React.FC = () => {
   const { currentSong, playSong, selectSong, isLyricViewOpen, playlist } = usePlayer();
@@ -12,6 +17,12 @@ export const CoverCarousel: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [continuousOffset, setContinuousOffset] = useState(0); // Fractional offset for smooth scrolling
   const carouselRef = useRef<HTMLDivElement>(null); // Ref for carousel container
+  const outerContainerRef = useRef<HTMLDivElement>(null); // Ref for outer container (for wheel events)
+  
+  // Wheel scroll state
+  const wheelAccumulatorRef = useRef(0);
+  const lastWheelSwitchRef = useRef(0);
+  const wheelTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Responsive check
   useEffect(() => {
@@ -44,54 +55,96 @@ export const CoverCarousel: React.FC = () => {
   useEffect(() => {
     if (isMobile || isLyricViewOpen || playlist.length === 0) return;
 
-    const carousel = carouselRef.current;
-    if (!carousel) return;
+    const container = outerContainerRef.current;
+    if (!container) return;
 
     const handleWheel = (e: WheelEvent) => {
       // Prevent default scrolling
       e.preventDefault();
       
-      // Use deltaY (vertical scroll) for horizontal navigation
-      // Positive deltaY = scroll down = next song
-      // Negative deltaY = scroll up = previous song
-      const delta = e.deltaY;
-      const threshold = 50; // Minimum scroll amount to trigger navigation
+      const now = Date.now();
       
-      if (Math.abs(delta) > threshold) {
-        if (delta > 0) {
-          // Scroll down -> next song
-          setActiveIndex((prev) => (prev + 1) % playlist.length);
-        } else {
-          // Scroll up -> previous song
-          setActiveIndex((prev) => (prev - 1 + playlist.length) % playlist.length);
-        }
+      // Check cooldown - prevent rapid switching
+      if (now - lastWheelSwitchRef.current < WHEEL_COOLDOWN) {
+        return;
       }
+      
+      // Accumulate scroll delta
+      wheelAccumulatorRef.current += e.deltaY;
+      
+      // Clear any pending reset timeout
+      if (wheelTimeoutRef.current) {
+        clearTimeout(wheelTimeoutRef.current);
+      }
+      
+      // Check if accumulated delta exceeds threshold
+      if (Math.abs(wheelAccumulatorRef.current) >= WHEEL_THRESHOLD) {
+        const direction = wheelAccumulatorRef.current > 0 ? 1 : -1;
+        
+        setActiveIndex((prev) => {
+          const newIndex = prev + direction;
+          if (newIndex < 0) return playlist.length - 1;
+          if (newIndex >= playlist.length) return 0;
+          return newIndex;
+        });
+        
+        // Reset accumulator and record switch time
+        wheelAccumulatorRef.current = 0;
+        lastWheelSwitchRef.current = now;
+      }
+      
+      // Reset accumulator after a period of inactivity
+      wheelTimeoutRef.current = setTimeout(() => {
+        wheelAccumulatorRef.current = 0;
+      }, 150);
     };
 
-    // Add wheel event listener to the carousel container
-    carousel.addEventListener('wheel', handleWheel, { passive: false });
-    return () => carousel.removeEventListener('wheel', handleWheel);
+    // Add wheel event listener to the outer container for better coverage
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+      if (wheelTimeoutRef.current) {
+        clearTimeout(wheelTimeoutRef.current);
+      }
+    };
   }, [isMobile, isLyricViewOpen, playlist.length]);
 
   const handleDrag = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    // Convert drag distance to continuous offset
+    // Convert drag distance to continuous offset for visual feedback
     // Positive drag (right) should show previous song (move carousel left)
     const cardWidth = isMobile ? 256 : 384;
-    const dragInCards = info.offset.x / (cardWidth * DRAG_SENSITIVITY);
-    setContinuousOffset(dragInCards);
+    // Use a more controlled sensitivity that caps at ~1 card offset
+    const maxOffset = 1.2;
+    const rawOffset = info.offset.x / cardWidth;
+    const clampedOffset = Math.max(-maxOffset, Math.min(maxOffset, rawOffset));
+    setContinuousOffset(clampedOffset);
   };
 
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    // Calculate how many cards were skipped
     const cardWidth = isMobile ? 256 : 384;
-    const dragInCards = info.offset.x / (cardWidth * DRAG_SENSITIVITY);
-    const skipCount = Math.round(dragInCards);
+    const offsetX = info.offset.x;
+    const velocityX = info.velocity.x;
     
-    // Update active index - positive drag means going backwards
-    setActiveIndex((prev) => {
-      const newIndex = (prev - skipCount) % playlist.length;
-      return newIndex < 0 ? newIndex + playlist.length : newIndex;
-    });
+    let direction = 0;
+    
+    // Check if velocity is high enough for a quick swipe (prioritize velocity)
+    if (Math.abs(velocityX) > VELOCITY_THRESHOLD) {
+      direction = velocityX > 0 ? -1 : 1; // Swipe right = previous, swipe left = next
+    } 
+    // Otherwise, check if drag distance exceeds threshold
+    else if (Math.abs(offsetX) > SWIPE_THRESHOLD) {
+      direction = offsetX > 0 ? -1 : 1;
+    }
+    
+    // Only switch by ONE song at a time for predictable behavior
+    if (direction !== 0) {
+      setActiveIndex((prev) => {
+        const newIndex = prev + direction;
+        if (newIndex < 0) return playlist.length - 1;
+        if (newIndex >= playlist.length) return 0;
+        return newIndex;
+      });
+    }
     
     // Reset continuous offset
     setContinuousOffset(0);
@@ -117,6 +170,7 @@ export const CoverCarousel: React.FC = () => {
     <AnimatePresence>
       {!isLyricViewOpen && (
         <motion.div
+          ref={outerContainerRef}
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
