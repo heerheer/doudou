@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { usePlayer } from '../App';
 import { PlayCircle } from 'lucide-react';
@@ -12,7 +12,8 @@ const WHEEL_COOLDOWN = 200; // Minimum ms between wheel-triggered switches (redu
 const WHEEL_THRESHOLD = 20; // Minimum accumulated delta to trigger switch (lowered for better responsiveness)
 
 export const CoverCarousel: React.FC = () => {
-  const { currentSong, playSong, selectSong, isLyricViewOpen, playlist } = usePlayer();
+  const { currentSong, playSong, selectSong, isLyricViewOpen, playlist, audioState } = usePlayer();
+  const isPlaying = audioState.isPlaying;
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [continuousOffset, setContinuousOffset] = useState(0); // Fractional offset for smooth scrolling
@@ -44,16 +45,16 @@ export const CoverCarousel: React.FC = () => {
 
   // Sync currentSong TO activeIndex (when Browsing/Dragging)
   useEffect(() => {
-    if (playlist.length === 0) return;
+    if (playlist.length === 0 || isPlaying) return;
     const selectedSong = playlist[activeIndex];
     if (selectedSong && currentSong?.id !== selectedSong.id) {
         selectSong(selectedSong);
     }
-  }, [activeIndex]);
+  }, [activeIndex, playlist, currentSong?.id, isPlaying, selectSong]);
 
   // Mouse wheel handler for desktop horizontal scrolling
   useEffect(() => {
-    if (isMobile || isLyricViewOpen || playlist.length === 0) return;
+    if (isMobile || isLyricViewOpen || playlist.length === 0 ) return;
 
     const container = outerContainerRef.current;
     if (!container) return;
@@ -107,7 +108,7 @@ export const CoverCarousel: React.FC = () => {
         clearTimeout(wheelTimeoutRef.current);
       }
     };
-  }, [isMobile, isLyricViewOpen, playlist.length]);
+  }, [isMobile, isLyricViewOpen, playlist.length, isPlaying]);
 
   const handleDrag = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     // Convert drag distance to continuous offset for visual feedback
@@ -121,6 +122,10 @@ export const CoverCarousel: React.FC = () => {
   };
 
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    if (isPlaying) {
+      setContinuousOffset(0);
+      return;
+    }
     const cardWidth = isMobile ? 256 : 384;
     const offsetX = info.offset.x;
     const velocityX = info.velocity.x;
