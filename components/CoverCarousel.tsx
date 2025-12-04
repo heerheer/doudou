@@ -119,7 +119,7 @@ export const CoverCarousel: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95, y: -50 }}
+          exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.5 }}
           className="relative w-full h-[60vh] md:h-[70vh] flex flex-col items-center justify-center perspective-1000"
         >
