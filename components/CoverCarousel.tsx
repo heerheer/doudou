@@ -233,6 +233,10 @@ export const CoverCarousel: React.FC = () => {
             <p className="text-xs tracking-[0.3em] font-light uppercase text-theme-subtext transition-colors duration-500">
               {activeSong.artist}
             </p>
+             {/* 可选的「主题原因?」 */}
+            <p className="text-xs tracking-[0.3em] font-light text-theme-subtext transition-colors duration-500">
+              {/* TODO */}
+            </p>
           </motion.div>
 
         </motion.div>

@@ -7,7 +7,7 @@ import { TopMiniDock } from './components/TopMiniDock';
 import { LyricView } from './components/LyricView';
 import { ConfigurationModal } from './components/ConfigurationModal';
 import { Sun, Moon, Settings } from 'lucide-react';
-import { getDefaultColors } from './utils';
+import { getDefaultColors, saveDataSourceUrl, loadDataSourceUrl } from './utils';
 // --- Context Setup ---
 const PlayerContext = createContext<PlayerContextType | null>(null);
 
@@ -101,8 +101,19 @@ const App: React.FC = () => {
   };
 
   const handleConfigSubmit = (url: string) => {
+    // Persist the configured URL so app remembers it on next load
+    saveDataSourceUrl(url);
     loadSongsFromUrl(url);
   };
+
+  // On mount, try to load persisted data source URL
+  useEffect(() => {
+    const saved = loadDataSourceUrl();
+    if (saved) {
+      setDataSourceUrl(saved);
+      loadSongsFromUrl(saved);
+    }
+  }, []);
 
   // --- Audio Logic ---
   useEffect(() => {

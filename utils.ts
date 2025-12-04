@@ -20,3 +20,22 @@ export const getDefaultColors = (theme: Theme, baseName?: string): ColorTheme =>
         glow: "rgba(255, 255, 255, 0.25)"
     };
 };
+
+// Local storage helpers for persisting data source URL
+export const DATA_SOURCE_KEY = 'doudou:dataSourceUrl';
+
+export const saveDataSourceUrl = (url: string) => {
+    try {
+        localStorage.setItem(DATA_SOURCE_KEY, url);
+    } catch (e) {
+        // ignore (e.g., storage disabled)
+    }
+};
+
+export const loadDataSourceUrl = (): string | null => {
+    try {
+        return localStorage.getItem(DATA_SOURCE_KEY);
+    } catch (e) {
+        return null;
+    }
+};
